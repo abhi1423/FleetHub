@@ -70,9 +70,6 @@ mvn clean install
 Run Application
 mvn spring-boot:run
 
-Application will start on:
-
-http://localhost:8080
 🧩 Key Functionalities
 Vehicle Management
 Register new vehicles
