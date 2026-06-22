@@ -4,6 +4,7 @@ package com.abhinav.Fleethub.services;
 import com.abhinav.Fleethub.DTOs.EndTrip;
 import com.abhinav.Fleethub.DTOs.RequestContainingConsumerInfo;
 import com.abhinav.Fleethub.DTOs.ResponseFomTransporter;
+import com.abhinav.Fleethub.DTOs.TransporterDTO;
 import com.abhinav.Fleethub.Repository.RequestRepository;
 import com.abhinav.Fleethub.Repository.TransporterRepository;
 import com.abhinav.Fleethub.Repository.VehicleRepository;
@@ -80,11 +81,32 @@ public class TransporterService
 		    transporterRepository.save(transporter);
 		    
 	}
-	public void RegisterTransporter(Transporter transporter)
+	public void RegisterTransporter(TransporterDTO transporterDTO)
 	{
 		try {
-			String id=UUID.randomUUID().toString();
-			transporter.setId(id);
+            List<Vehicle> vehicles = transporterDTO.getVehicleDTOList().stream().map(
+                    vehicleDTO -> {
+                        return Vehicle.builder()
+                                .carrierNumber(vehicleDTO.getCarrierNumber())
+                                .carrierCategory(vehicleDTO.getCarrierCategory())
+                                .fuelType(vehicleDTO.getFuelType())
+                                .IsAvailable(vehicleDTO.isAvailable())
+                                .model(vehicleDTO.getModel())
+                                .numberOfAxcels(vehicleDTO.getNumberOfAxcels())
+                                .capacityloadInTonsMin(vehicleDTO.getCapacityloadInTonsMin())
+                                .capacityloadInTonsMax(vehicleDTO.getCapacityloadInTonsMax())
+                                .build();
+                    }
+            ).toList();
+            Transporter transporter = Transporter.builder()
+                    .password(transporterDTO.getPassword())
+                    .username(transporterDTO.getUsername())
+                    .pincode(transporterDTO.getPincode())
+                    .city(transporterDTO.getCity())
+                    .phoneNumber(transporterDTO.getPhoneNumber())
+                    .vehicles(vehicles)
+                    .build();
+
 			transporterRepository.save(transporter);
 		}
 		catch(Exception e)
