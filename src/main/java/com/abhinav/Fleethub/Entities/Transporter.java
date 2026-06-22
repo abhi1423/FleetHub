@@ -3,10 +3,7 @@ package com.abhinav.Fleethub.Entities;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Pattern;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.List;
 
@@ -16,12 +13,14 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 @Table(name="transporters")
 public class Transporter
 {
-	@Column
-	@Id
-	String id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column
+    private String id;
 	@Column
 	String password;
 	@Column
@@ -40,6 +39,5 @@ public class Transporter
 	@JsonManagedReference("Tranporter-requests")
 	@OneToMany(mappedBy="transporter",cascade=CascadeType.ALL)
 	List<RequestToTransporter> requests;
-	
 
 }

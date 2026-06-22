@@ -6,12 +6,17 @@ import com.abhinav.Fleethub.model.enums.VehicleFuelType;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Entity
 @Table(name="Vehicles")
-
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Vehicle {
 	@Id
 	@Column(unique=true)

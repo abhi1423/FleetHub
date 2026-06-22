@@ -19,5 +19,5 @@ public interface VehicleRepository extends JpaRepository<Vehicle,String>{
             "and :load between v.capacityload_in_tons_min" +
             " and v.capacityload_in_tons_max" +
             " and v.is_available=true",nativeQuery=true)
-	public List<Vehicle> getVehiclesFromCity(@Param("city")String city,@Param("load")long load);
+	 List<Vehicle> getVehiclesFromCity(@Param("city")String city,@Param("load")long load);
 }

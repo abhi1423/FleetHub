@@ -1,9 +1,7 @@
 package com.abhinav.Fleethub.services;
 
 
-import com.abhinav.Fleethub.DTOs.EndTrip;
-import com.abhinav.Fleethub.DTOs.RequestContainingConsumerInfo;
-import com.abhinav.Fleethub.DTOs.ResponseFomTransporter;
+import com.abhinav.Fleethub.DTOs.*;
 import com.abhinav.Fleethub.Repository.RequestRepository;
 import com.abhinav.Fleethub.Repository.TransporterRepository;
 import com.abhinav.Fleethub.Repository.VehicleRepository;
@@ -15,6 +13,7 @@ import com.abhinav.Fleethub.Entities.Transporter;
 import com.abhinav.Fleethub.Entities.TripDetails;
 import com.abhinav.Fleethub.Entities.Vehicle;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -25,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class TransporterService
 {
@@ -46,51 +46,81 @@ public class TransporterService
 	@Autowired
 	RestTemplate restTemplate;
 
-	public void addVehicle(Vehicle vehicle, String username)
+	public void addVehicle(VehicleDTO vehicleDto, String username)
 	{
 		
 		Transporter transporter = transporterRepository.findByUsername(username)
 		        .orElseThrow(() -> new UserNotFoundException("Transporter not found"));
-		    
-		    System.out.println("Transporter details: " + transporter.getUsername());
-		    Optional<Vehicle> existingVehicleOpt = vehicleRepository.findByCarrierNumber(vehicle.getCarrierNumber());
-		    if (existingVehicleOpt.isPresent()) {
-		        throw new VehicleAlreadyExistsException("Vehicle with carrierNumber " + vehicle.getCarrierNumber() + " already exists");
-		    }
-		    TripDetails trip=new TripDetails();
-		    trip.setSrc(transporter.getCity());
-		    trip.setVehicle(vehicle);
-		    vehicle.setTripDetails(trip);
-		    vehicle.setTransporter(transporter);
 
-		    List<Vehicle> listVehicles = transporter.getVehicles();
-		    if (listVehicles == null) {
-		        listVehicles = new ArrayList<>();
-		    }
-		    else
-		    {
-		    	boolean anymatch=listVehicles.stream().anyMatch(v->v.getCarrierNumber().equals(vehicle.getCarrierNumber()));
-		    	if(anymatch)
-		    	{
-		    		throw new VehicleAlreadyExistsException("Duplicate vehcile");
-		    	}
-		    }
-		    listVehicles.add(vehicle);
-		    transporter.setVehicles(listVehicles);
-		    transporterRepository.save(transporter);
-		    
-	}
-	public void RegisterTransporter(Transporter transporter)
+        List<Vehicle> listVehicles = transporter.getVehicles();
+        if (listVehicles == null) {
+            listVehicles = new ArrayList<>();
+        } else {
+            boolean anyMatch = listVehicles.stream().anyMatch(v -> v.getCarrierNumber().equals(vehicleDto.getCarrierNumber()));
+            if (anyMatch) {
+                throw new VehicleAlreadyExistsException("Vehicle with carrierNumber " + vehicleDto.getCarrierNumber() + " already exists");
+            }
+        }
+
+        Vehicle vehicle = Vehicle.builder()
+                .carrierNumber(vehicleDto.getCarrierNumber())
+                .carrierCategory(vehicleDto.getCarrierCategory())
+                .fuelType(vehicleDto.getFuelType())
+                .IsAvailable(vehicleDto.isAvailable())
+                .model(vehicleDto.getModel())
+                .numberOfAxcels(vehicleDto.getNumberOfAxcels())
+                .capacityloadInTonsMin(vehicleDto.getCapacityloadInTonsMin())
+                .capacityloadInTonsMax(vehicleDto.getCapacityloadInTonsMax())
+                .build();
+
+        TripDetails trip = new TripDetails();
+        trip.setSrc(transporter.getCity());
+
+        vehicle.setTripDetails(trip);
+
+        vehicle.setTransporter(transporter);
+
+        vehicleRepository.save(vehicle);
+
+    }
+	public void RegisterTransporter(TransporterDTO transporterDTO)
 	{
 		try {
-			String id=UUID.randomUUID().toString();
-			transporter.setId(id);
+            List<Vehicle> vehicles = transporterDTO.getVehicleDTOList().stream().map(
+                    vehicleDTO -> {
+                        return Vehicle.builder()
+                                .carrierNumber(vehicleDTO.getCarrierNumber())
+                                .carrierCategory(vehicleDTO.getCarrierCategory())
+                                .fuelType(vehicleDTO.getFuelType())
+                                .IsAvailable(vehicleDTO.isAvailable())
+                                .model(vehicleDTO.getModel())
+                                .numberOfAxcels(vehicleDTO.getNumberOfAxcels())
+                                .capacityloadInTonsMin(vehicleDTO.getCapacityloadInTonsMin())
+                                .capacityloadInTonsMax(vehicleDTO.getCapacityloadInTonsMax())
+                                .build();
+                    }
+            ).toList();
+            Transporter transporter = Transporter.builder()
+                    .password(transporterDTO.getPassword())
+                    .username(transporterDTO.getUsername())
+                    .pincode(transporterDTO.getPincode())
+                    .city(transporterDTO.getCity())
+                    .phoneNumber(transporterDTO.getPhoneNumber())
+                    .build();
+            vehicles.forEach(v -> {
+                v.setTransporter(transporter);
+                TripDetails trip = new TripDetails();
+                trip.setSrc(transporter.getCity());
+                v.setTripDetails(trip);
+            });
+            transporter.setVehicles(vehicles);
 			transporterRepository.save(transporter);
 		}
-		catch(Exception e)
-		{
-			System.out.println("Unkown exception occured");
-		}
+        catch(Exception e)
+        {
+            log.error("The exception during saving transporter "+e.getMessage());
+            throw e;
+        }
 		
 	}
     
@@ -130,9 +160,12 @@ public class TransporterService
 		
 	}
 	
-	public List<Vehicle> getVehiclesFromCity(String city,long load)
+	public List<VehicleAndTransporterDetails> getVehiclesFromCity(String city,long load)
 	{
-		return vehicleRepository.getVehiclesFromCity(city,load);
+		List<Vehicle> vehicles = vehicleRepository.getVehiclesFromCity(city,load);
+        return vehicles.stream()
+                .map(this::convertToDto)
+                .toList();
 	}
 	public Transporter getOwnerUsingVehicleNumber(String vehicleId) {
 		Vehicle vehicle=vehicleRepository.findByCarrierNumber(vehicleId).orElse(null);
@@ -145,7 +178,7 @@ public class TransporterService
 		}
 		return tranporter;
 	}
-	public Vehicle addRequestForVehcile(String vehicleNumber, RequestContainingConsumerInfo consumerInfo)
+	public VehicleAndTransporterDetails addRequestForVehcile(String vehicleNumber, RequestContainingConsumerInfo consumerInfo)
 	{
 		Vehicle vehicle=vehicleRepository.findByCarrierNumber(vehicleNumber).orElse(null);
 		if(vehicle==null)
@@ -174,7 +207,7 @@ public class TransporterService
 		}
 		transporter.setRequests(list);
 		transporterRepository.save(transporter);
-		return vehicle;
+		return this.convertToDto(vehicle);
 		
 	}
 	public List<RequestToTransporter> getRequestForTransporter(String transporterId) {
@@ -283,5 +316,25 @@ public class TransporterService
 			System.out.println(e.getMessage());
 		}
 		return put_response;
+    }
+
+    private VehicleAndTransporterDetails convertToDto(Vehicle vehicle) {
+
+        return VehicleAndTransporterDetails.builder()
+                .carrierNumber(vehicle.getCarrierNumber())
+                .carrierCategory(vehicle.getCarrierCategory().name())
+                .fuelType(vehicle.getFuelType().name())
+                .IsAvailable(vehicle.isIsAvailable())
+                .model(vehicle.getModel())
+                .numberOfAxcels(vehicle.getNumberOfAxcels())
+                .capacityloadInTonsMin(vehicle.getCapacityloadInTonsMin())
+                .capacityloadInTonsMax(vehicle.getCapacityloadInTonsMax())
+                .transporterInformation(
+                        TransporterInformation.builder()
+                                .username(vehicle.getTransporter().getUsername())
+                                .phoneNumber(vehicle.getTransporter().getPhoneNumber())
+                                .build()
+                )
+                .build();
     }
 }
