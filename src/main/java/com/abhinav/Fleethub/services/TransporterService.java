@@ -250,7 +250,7 @@ public class TransporterService
 		trip.setSrc(req.getSource());
 		trip.setDest(req.getDestination());
 
-		String URL="http://localhost:8086/consumer/get/responseFromTransporter";
+		String URL="http://CONSUMER-SERVICES/consumer/get/responseFromTransporter";
 		ResponseEntity<ResponseFomTransporter> put_response= new ResponseEntity<ResponseFomTransporter>(HttpStatus.BAD_GATEWAY);
 		try {
 			ResponseFomTransporter responseFromTransporter= ResponseFomTransporter.builder().transporter(req.getTransporter().getUsername())
